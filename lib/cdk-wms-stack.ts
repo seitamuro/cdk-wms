@@ -95,6 +95,7 @@ export class CdkWmsStack extends cdk.Stack {
       description: "倉庫業務を行うエージェント",
       agentResourceRoleArn: agentsRole.roleArn,
       foundationModel: foundationModel,
+      autoPrepare: true,
       instruction: `あなたは倉庫業務のエージェントです。入力に応じて在庫の検索や登録・更新を行います。使用できる言語は日本語のみです。
         製品の在庫数を検索するリクエストは製品名{product_name}を使ってアクションを呼び出します。
         製品の在庫を追加するリクエストは製品名{product_name}と数量{num}を使ってアクションを呼び出します。
@@ -106,6 +107,12 @@ export class CdkWmsStack extends cdk.Stack {
         </example>
         `,
       actionGroups: [
+        {
+          // ユーザー入力の有効化
+          actionGroupName: "UserInputAction",
+          actionGroupState: "ENABLED",
+          parentActionGroupSignature: "AMAZON.UserInput",
+        },
         {
           actionGroupName: "search-warehouse-seimiura",
           description: "倉庫情報にある商品の在庫情報を検索する",

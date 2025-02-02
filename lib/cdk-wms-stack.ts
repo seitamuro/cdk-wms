@@ -44,6 +44,21 @@ export class CdkWmsStack extends cdk.Stack {
     );
     warehouseTable.grantReadData(searchWarehouseFunction);
 
+    const updateWarehouseFunction = new NodejsFunction(
+      this,
+      "UpdateWarehouseFunction",
+      {
+        runtime: lambda.Runtime.NODEJS_22_X,
+        role: functionRole,
+        entry: "lambda/update-warehouse-seimiura.ts",
+        handler: "handler",
+        environment: {
+          TABLE_NAME: warehouseTable.tableName,
+        },
+      }
+    );
+    warehouseTable.grantReadWriteData(updateWarehouseFunction);
+
     const agentsRole = new iam.Role(this, "AgentsRole", {
       assumedBy: new iam.ServicePrincipal("bedrock.amazonaws.com"),
       inlinePolicies: {
@@ -65,8 +80,14 @@ export class CdkWmsStack extends cdk.Stack {
       description: "倉庫業務を行うエージェント",
       agentResourceRoleArn: agentsRole.roleArn,
       foundationModel: foundationModel,
-      instruction:
-        "あなたは倉庫業務のエージェントです。入力に応じて在庫の検索や登録・更新を行います。使用できる言語は日本語のみです。",
+      instruction: `あなたは倉庫業務のエージェントです。入力に応じて在庫の検索や登録・更新を行います。使用できる言語は日本語のみです。
+        製品の在庫数を検索するリクエストは製品名{product_name}を使ってアクションを呼び出します。
+        背品の在庫を追加するリクエストは製品名{product_name}と数量{num}を使ってアクションを呼び出します。
+        <example>
+        "シャンプーは何個ですか"というリクエストの場合、{product_name}がシャンプーを表します
+        "シャンプーを10個登録したい"というリクエストの場合、{product_name}がシャンプー、{num}が10を表します
+        </example>
+        `,
       actionGroups: [
         {
           actionGroupName: "search-warehouse-seimiura",
@@ -91,6 +112,34 @@ export class CdkWmsStack extends cdk.Stack {
             lambda: searchWarehouseFunction.functionArn,
           },
         },
+        {
+          actionGroupName: "update-warehouse-seimiura",
+          description: "倉庫の在庫情報を更新します",
+          actionGroupState: "ENABLED",
+          functionSchema: {
+            functions: [
+              {
+                name: "update-warehouse-function-seimiura",
+                description: "倉庫の在庫情報を更新します",
+                parameters: {
+                  product_name: {
+                    description: "製品名",
+                    type: "string",
+                    required: true,
+                  },
+                  num: {
+                    description: "製品の数量",
+                    type: "number",
+                    required: true,
+                  },
+                },
+              },
+            ],
+          },
+          actionGroupExecutor: {
+            lambda: updateWarehouseFunction.functionArn,
+          },
+        },
       ],
     });
 
@@ -102,5 +151,6 @@ export class CdkWmsStack extends cdk.Stack {
       },
     });
     searchWarehouseFunction.grantInvoke(bedrockPrincipal);
+    updateWarehouseFunction.grantInvoke(bedrockPrincipal);
   }
 }

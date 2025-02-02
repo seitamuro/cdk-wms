@@ -1,5 +1,6 @@
 import * as cdk from "aws-cdk-lib";
 import * as bedrock from "aws-cdk-lib/aws-bedrock";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
@@ -11,6 +12,13 @@ export class CdkWmsStack extends cdk.Stack {
     super(scope, id, props);
 
     const foundationModel = this.node.tryGetContext("foundationModel");
+
+    const warehouseTable = new dynamodb.Table(this, "WarehouseTable", {
+      partitionKey: {
+        name: "id",
+        type: dynamodb.AttributeType.STRING,
+      },
+    });
 
     const functionRole = new iam.Role(this, "FunctionRole", {
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
@@ -29,11 +37,15 @@ export class CdkWmsStack extends cdk.Stack {
         role: functionRole,
         entry: "lambda/search-warehouse-seimiura.ts",
         handler: "handler",
+        environment: {
+          TABLE_NAME: warehouseTable.tableName,
+        },
       }
     );
+    warehouseTable.grantReadData(searchWarehouseFunction);
 
     const agentsRole = new iam.Role(this, "AgentsRole", {
-      assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
+      assumedBy: new iam.ServicePrincipal("bedrock.amazonaws.com"),
       inlinePolicies: {
         agentPolicy: new iam.PolicyDocument({
           statements: [

@@ -15,7 +15,7 @@
     ]
   },
   "context": {
-    "foundationModel": "amazon.nova-pro-v1:0",
+    "foundationModel": "anthropic.claude-3-sonnet-20240229-v1:0",
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
     "@aws-cdk/core:checkSecretUsage": true,
     "@aws-cdk/core:target-partitions": ["aws", "aws-cn"],

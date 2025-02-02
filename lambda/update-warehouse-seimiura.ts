@@ -31,7 +31,6 @@ export const handler = async (event: any = {}): Promise<any> => {
   const _function = event["function"];
   const _parameters: any[] = event["parameters"] || [];
 
-  console.log(_parameters);
   const product_name = _parameters.filter(
     (param) => param.name === "product_name"
   )[0].value;
@@ -53,7 +52,6 @@ export const handler = async (event: any = {}): Promise<any> => {
     });
 
     const getResponse = await client.send(getCommand);
-    console.log(JSON.stringify(getResponse));
     const items = getResponse.Items!;
 
     if (items.length === 0) {
@@ -84,7 +82,6 @@ export const handler = async (event: any = {}): Promise<any> => {
     });
 
     const updateResponse = await client.send(updateCommand);
-    console.log(JSON.stringify(updateResponse));
 
     return createResponse(
       _actionGroup,

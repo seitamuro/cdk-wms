@@ -27,7 +27,6 @@ export const handler = async (event: any = {}): Promise<any> => {
   const _function = event["function"];
   const _parameters: any[] = event["parameters"] || [];
 
-  console.log(_parameters);
   const product_name = _parameters.filter(
     (param) => param.name === "product_name"
   )[0].value;
@@ -47,7 +46,6 @@ export const handler = async (event: any = {}): Promise<any> => {
 
   try {
     const response = await client.send(command);
-    console.log(response);
     const items = response.Items!;
 
     if (items.length === 0) {

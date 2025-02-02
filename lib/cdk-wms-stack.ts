@@ -59,6 +59,21 @@ export class CdkWmsStack extends cdk.Stack {
     );
     warehouseTable.grantReadWriteData(updateWarehouseFunction);
 
+    const infoWarehouseFunction = new NodejsFunction(
+      this,
+      "InfoWarehouseFunction",
+      {
+        runtime: lambda.Runtime.NODEJS_22_X,
+        role: functionRole,
+        entry: "lambda/info-warehouse-seimiura.ts",
+        handler: "handler",
+        environment: {
+          TABLE_NAME: warehouseTable.tableName,
+        },
+      }
+    );
+    warehouseTable.grantReadData(infoWarehouseFunction);
+
     const agentsRole = new iam.Role(this, "AgentsRole", {
       assumedBy: new iam.ServicePrincipal("bedrock.amazonaws.com"),
       inlinePolicies: {
@@ -82,10 +97,12 @@ export class CdkWmsStack extends cdk.Stack {
       foundationModel: foundationModel,
       instruction: `あなたは倉庫業務のエージェントです。入力に応じて在庫の検索や登録・更新を行います。使用できる言語は日本語のみです。
         製品の在庫数を検索するリクエストは製品名{product_name}を使ってアクションを呼び出します。
-        背品の在庫を追加するリクエストは製品名{product_name}と数量{num}を使ってアクションを呼び出します。
+        製品の在庫を追加するリクエストは製品名{product_name}と数量{num}を使ってアクションを呼び出します。
+        製品情報を調べたいリクエストは製品名{product_name}を使ってアクションを呼び出します。
         <example>
         "シャンプーは何個ですか"というリクエストの場合、{product_name}がシャンプーを表します
         "シャンプーを10個登録したい"というリクエストの場合、{product_name}がシャンプー、{num}が10を表します
+        "シャンプーの情報を知りたい"というリクエストの場合、{product_name}がシャンプーを表します
         </example>
         `,
       actionGroups: [
@@ -140,6 +157,29 @@ export class CdkWmsStack extends cdk.Stack {
             lambda: updateWarehouseFunction.functionArn,
           },
         },
+        {
+          actionGroupName: "info-warehouse-seimiura",
+          description: "製品情報を検索します",
+          actionGroupState: "ENABLED",
+          functionSchema: {
+            functions: [
+              {
+                name: "info-warehouse-function-seimiura",
+                description: "製品情報を検索します",
+                parameters: {
+                  product_name: {
+                    description: "製品名",
+                    type: "string",
+                    required: true,
+                  },
+                },
+              },
+            ],
+          },
+          actionGroupExecutor: {
+            lambda: updateWarehouseFunction.functionArn,
+          },
+        },
       ],
     });
 
@@ -152,5 +192,6 @@ export class CdkWmsStack extends cdk.Stack {
     });
     searchWarehouseFunction.grantInvoke(bedrockPrincipal);
     updateWarehouseFunction.grantInvoke(bedrockPrincipal);
+    infoWarehouseFunction.grantInvoke(bedrockPrincipal);
   }
 }
